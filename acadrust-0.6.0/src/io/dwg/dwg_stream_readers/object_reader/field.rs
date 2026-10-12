@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 use crate::io::dwg::dwg_stream_readers::merged_reader::DwgMergedReader;
 use crate::io::dwg::dwg_version::DwgVersion;
 use crate::objects::{Field, FieldChildValue, FieldList};
@@ -27,18 +28,18 @@ pub fn read_field_object(reader: &mut DwgMergedReader, version: DwgVersion) -> F
     let value_string = reader.read_variable_text();
     let value_string_length = reader.read_bit_long();
     let child_value_count = safe_count(reader.read_bit_long());
-    let mut child_values = Vec::with_capacity(child_value_count);
+    let mut child_values = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(child_value_count));
     for _ in 0..child_value_count {
         child_values.push(FieldChildValue {
             key: reader.read_variable_text(),
             value: super::entities::read_cad_value(reader, version),
         });
     }
-    let mut child_fields = Vec::with_capacity(child_count);
+    let mut child_fields = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(child_count));
     for _ in 0..child_count {
         child_fields.push(Handle::from(reader.read_handle()));
     }
-    let mut referenced_objects = Vec::with_capacity(object_count);
+    let mut referenced_objects = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(object_count));
     for _ in 0..object_count {
         referenced_objects.push(Handle::from(reader.read_handle()));
     }
@@ -65,7 +66,7 @@ pub fn read_field_object(reader: &mut DwgMergedReader, version: DwgVersion) -> F
 pub fn read_field_list(reader: &mut DwgMergedReader) -> FieldList {
     let count = safe_count(reader.read_bit_long());
     let unknown = reader.read_bit();
-    let mut fields = Vec::with_capacity(count);
+    let mut fields = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count));
     for _ in 0..count {
         fields.push(Handle::from(reader.read_handle()));
     }

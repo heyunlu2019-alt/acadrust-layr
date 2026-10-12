@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! DWG bit-level binary reader
 //!
 //! The DWG format operates at bit granularity, not byte granularity.
@@ -44,6 +45,24 @@ pub struct DwgBitReader {
     text_stream_pos: i64,
     /// One-past-the-end bit position of the R2007+ text stream.
     text_stream_end_pos: i64,
+    /// LAYR patch: bytes requested past the end of `data` (zero-filled reads).
+    overrun: usize,
+}
+
+/// LAYR patch: zero-filled reads past the end tolerated per reader before panicking.
+/// The panic is caught by the per-record catch_unwind in dwg_document_builder or by the caller.
+pub const OVERRUN_LIMIT: usize = 1 << 16;
+/// LAYR patch: upper bound for capacity reserved from an untrusted count field.
+/// Vectors still grow on push; this only stops one corrupted field from requesting terabytes.
+pub const MAX_PREALLOC: usize = 1 << 16;
+#[inline]
+pub fn cap(n: usize) -> usize { n.min(MAX_PREALLOC) }
+/// LAYR patch: zero-filled buffer whose length comes from the file.
+pub const MAX_ZEROED: usize = 64 << 20;
+#[inline]
+pub fn zeroed(n: usize) -> Vec<u8> {
+    if n > MAX_ZEROED { panic!("DWG field requests {n} bytes"); }
+    vec![0u8; n]
 }
 
 impl DwgBitReader {
@@ -59,6 +78,7 @@ impl DwgBitReader {
         Self {
             data,
             position: 0,
+            overrun: 0,
             bit_shift: 0,
             last_byte: 0,
             version,
@@ -172,7 +192,14 @@ impl DwgBitReader {
             self.position += 1;
         } else {
             self.last_byte = 0;
+            self.note_overrun(1);
         }
+    }
+
+    #[inline]
+    fn note_overrun(&mut self, bytes: usize) {
+        self.overrun = self.overrun.saturating_add(bytes);
+        if self.overrun > OVERRUN_LIMIT { panic!("DWG bit stream overrun"); }
     }
 
     /// Advance by `offset` bytes, reading the last one into `last_byte`.
@@ -199,6 +226,9 @@ impl DwgBitReader {
 
     /// Read `length` bytes, applying the current bit shift.
     pub fn read_bytes(&mut self, length: usize) -> Vec<u8> {
+        if length > self.data.len().saturating_sub(self.position).saturating_add(OVERRUN_LIMIT) {
+            panic!("DWG byte run {length} exceeds stream");
+        }
         let mut arr = vec![0u8; length];
         self.apply_shift_to_arr(&mut arr);
         arr
@@ -1043,10 +1073,12 @@ impl DwgBitReader {
         if start >= self.data.len() {
             // Past end of data — fill with zeros
             arr.iter_mut().for_each(|b| *b = 0);
+            self.note_overrun(length);
             return;
         }
         let end = (start + length).min(self.data.len());
         let available = end - start;
+        if available < length { self.note_overrun(length - available); }
         arr[..available].copy_from_slice(&self.data[start..end]);
         self.position = end;
 

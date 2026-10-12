@@ -1,0 +1,30 @@
+LAYR 對 acadrust 0.6.0 的修改（MPL-2.0）
+上游 commit：9820fd3f51b7e31ca2fc95df0312011755816617
+上游 .crate SHA-256：d7cbc67281dc3c099c3f35c268dd80a04215ffa0580c37510d4fe7a6e4d6d14f
+修改版原始碼公開網址：待定
+依 MPL-2.0，下列修改檔案的修改版原始碼會公開，與本說明一起提供。
+保留上游 LICENSE 與原有授權標頭、CRLF 換行。
+
+修改目的：避免壞檔數量欄位造成巨額預先配置或長時間讀取檔尾。
+bit_reader.rs：讀過尾端超過 64 KiB 即 panic，read_bytes 檢查剩餘長度；cap 預先配置上限 65,536 個元素；zeroed 上限 64 MiB。
+dwg_reader.rs：AC21 解壓上限 100 MB，區段上限 256 MiB。
+其餘下列檔案：讀取端 with_capacity／reserve 使用 cap；位元長度緩衝使用 zeroed；不修改寫入端。
+cap 只限制預先配置，向量仍可成長，並不代表整個解析器的總記憶體上限。
+catch_unwind 攔截 panic，無法攔截配置耗盡 abort；此修補不是對任意惡意檔案的絕對保證。
+
+修改檔案（逐一列出）：
+- src/io/dwg/dwg_document_builder.rs
+- src/io/dwg/dwg_reader.rs
+- src/io/dwg/dwg_stream_readers/bit_reader.rs
+- src/io/dwg/dwg_stream_readers/object_reader/associative.rs
+- src/io/dwg/dwg_stream_readers/object_reader/class_object.rs
+- src/io/dwg/dwg_stream_readers/object_reader/dgn_linestyle.rs
+- src/io/dwg/dwg_stream_readers/object_reader/dynamic_block.rs
+- src/io/dwg/dwg_stream_readers/object_reader/entities.rs
+- src/io/dwg/dwg_stream_readers/object_reader/field.rs
+- src/io/dwg/dwg_stream_readers/object_reader/mod.rs
+- src/io/dwg/dwg_stream_readers/object_reader/objects.rs
+- src/io/dwg/dwg_stream_readers/object_reader/tables.rs
+
+另修改 .gitattributes：停用 Git 文字正規化，以保留所有上游檔案與修補檔的 CRLF bytes。
+未提交 Cargo 的 .cargo-ok 快取完成標記；該檔不是上游原始碼。

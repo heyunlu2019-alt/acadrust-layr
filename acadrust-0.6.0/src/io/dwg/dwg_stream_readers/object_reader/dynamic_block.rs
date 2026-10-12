@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 use crate::io::dwg::dwg_stream_readers::merged_reader::DwgMergedReader;
 use crate::io::dwg::dwg_version::DwgVersion;
 use crate::objects::*;
@@ -57,7 +58,7 @@ fn read_connection(reader: &mut DwgMergedReader) -> BlockConnection {
 
 fn read_property(reader: &mut DwgMergedReader) -> BlockParameterProperty {
     let count = safe_count(reader.read_bit_long());
-    let mut connections = Vec::with_capacity(count as usize);
+    let mut connections = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         connections.push(read_connection(reader));
     }
@@ -128,12 +129,12 @@ fn read_action(reader: &mut DwgMergedReader) -> BlockAction {
     let element = read_element(reader);
     let display_location = reader.read_3bit_double();
     let dependency_count = safe_count(reader.read_bit_long());
-    let mut dependencies = Vec::with_capacity(dependency_count as usize);
+    let mut dependencies = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(dependency_count as usize));
     for _ in 0..dependency_count {
         dependencies.push(Handle::from(reader.read_handle()));
     }
     let action_count = safe_count(reader.read_bit_long());
-    let mut action_ids = Vec::with_capacity(action_count as usize);
+    let mut action_ids = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(action_count as usize));
     for _ in 0..action_count {
         action_ids.push(reader.read_bit_long());
     }
@@ -161,7 +162,7 @@ fn read_value_set(reader: &mut DwgMergedReader) -> BlockParameterValueSet {
     let maximum = reader.read_bit_double();
     let increment = reader.read_bit_double();
     let count = safe_count(reader.read_bit_short() as i32);
-    let mut values = Vec::with_capacity(count as usize);
+    let mut values = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         values.push(reader.read_bit_double());
     }
@@ -395,7 +396,7 @@ pub fn read_solid_history_data(
             let base_distance = reader.read_bit_double();
             let other_distance = reader.read_bit_double();
             let count = safe_count(reader.read_bit_long());
-            let mut edges = Vec::with_capacity(count as usize);
+            let mut edges = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 edges.push(reader.read_bit_long());
             }
@@ -415,22 +416,22 @@ pub fn read_solid_history_data(
             let operation_minor = reader.read_bit_long();
             let method = reader.read_bit_long();
             let edge_count = safe_count(reader.read_bit_long());
-            let mut edges = Vec::with_capacity(edge_count as usize);
+            let mut edges = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(edge_count as usize));
             for _ in 0..edge_count {
                 edges.push(reader.read_bit_long());
             }
             let radius_count = safe_count(reader.read_bit_long());
-            let mut radii = Vec::with_capacity(radius_count as usize);
+            let mut radii = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(radius_count as usize));
             for _ in 0..radius_count {
                 radii.push(reader.read_bit_double());
             }
             let start_count = safe_count(reader.read_bit_long());
             let end_count = safe_count(reader.read_bit_long());
-            let mut end_setbacks = Vec::with_capacity(end_count as usize);
+            let mut end_setbacks = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(end_count as usize));
             for _ in 0..end_count {
                 end_setbacks.push(reader.read_bit_double());
             }
-            let mut start_setbacks = Vec::with_capacity(start_count as usize);
+            let mut start_setbacks = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(start_count as usize));
             for _ in 0..start_count {
                 start_setbacks.push(reader.read_bit_double());
             }
@@ -478,7 +479,7 @@ pub fn read_solid_history_data(
             let operation_major = reader.read_bit_long();
             let operation_minor = reader.read_bit_long();
             let cross_count = safe_count(reader.read_bit_long());
-            let mut cross_sections = Vec::with_capacity(cross_count as usize);
+            let mut cross_sections = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(cross_count as usize));
             for _ in 0..cross_count {
                 let entity_type = reader.read_bit_long();
                 let byte_length = safe_count(reader.read_bit_long()) as usize;
@@ -493,7 +494,7 @@ pub fn read_solid_history_data(
                 }
             }
             let guide_count = safe_count(reader.read_bit_long());
-            let mut guides = Vec::with_capacity(guide_count as usize);
+            let mut guides = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(guide_count as usize));
             for _ in 0..guide_count {
                 let entity_type = reader.read_bit_long();
                 let byte_length = safe_count(reader.read_bit_long()) as usize;
@@ -797,11 +798,11 @@ pub fn read_dynamic_block_data(
             let row_count = reader.read_bit_long();
             let column_count = reader.read_bit_long();
             let count = safe_count(row_count.saturating_mul(column_count));
-            let mut expressions = Vec::with_capacity(count as usize);
+            let mut expressions = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 expressions.push(reader.read_variable_text());
             }
-            let mut rows = Vec::with_capacity(count as usize);
+            let mut rows = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 rows.push(BlockLookupRow {
                     connections: [
@@ -826,27 +827,27 @@ pub fn read_dynamic_block_data(
             let action = read_action(reader);
             let connections = [read_connection(reader), read_connection(reader)];
             let point_count = safe_count(reader.read_bit_long());
-            let mut points = Vec::with_capacity(point_count as usize);
+            let mut points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(point_count as usize));
             for _ in 0..point_count {
                 points.push(reader.read_2raw_double());
             }
             let handle_count = safe_count(reader.read_bit_long());
-            let mut handles = Vec::with_capacity(handle_count as usize);
+            let mut handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(handle_count as usize));
             for _ in 0..handle_count {
                 let handle = Handle::from(reader.read_handle());
                 let count = safe_count(reader.read_bit_short() as i32);
-                let mut indexes = Vec::with_capacity(count as usize);
+                let mut indexes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     indexes.push(reader.read_bit_long());
                 }
                 handles.push(BlockStretchHandle { handle, indexes });
             }
             let code_count = safe_count(reader.read_bit_long());
-            let mut codes = Vec::with_capacity(code_count as usize);
+            let mut codes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(code_count as usize));
             for _ in 0..code_count {
                 let code = reader.read_bit_long();
                 let count = safe_count(reader.read_bit_short() as i32);
-                let mut indexes = Vec::with_capacity(count as usize);
+                let mut indexes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     indexes.push(reader.read_bit_long());
                 }
@@ -872,21 +873,21 @@ pub fn read_dynamic_block_data(
                 read_connection(reader),
             ];
             let point_count = safe_count(reader.read_bit_long());
-            let mut points = Vec::with_capacity(point_count as usize);
+            let mut points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(point_count as usize));
             for _ in 0..point_count {
                 points.push(reader.read_2raw_double());
             }
             let handle_count = safe_count(reader.read_bit_long());
-            let mut handles = Vec::with_capacity(handle_count as usize);
+            let mut handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(handle_count as usize));
             for _ in 0..handle_count {
                 handles.push(Handle::from(reader.read_handle()));
             }
-            let mut handle_flags = Vec::with_capacity(handle_count as usize);
+            let mut handle_flags = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(handle_count as usize));
             for _ in 0..handle_count {
                 handle_flags.push(reader.read_bit_short());
             }
             let code_count = safe_count(reader.read_bit_long());
-            let mut codes = Vec::with_capacity(code_count as usize);
+            let mut codes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(code_count as usize));
             for _ in 0..code_count {
                 codes.push(reader.read_bit_long());
             }
@@ -904,7 +905,7 @@ pub fn read_dynamic_block_data(
             let first_node_id = reader.read_bit_long();
             let first_node_id_copy = reader.read_bit_long();
             let node_count = safe_count(reader.read_bit_long());
-            let mut nodes = Vec::with_capacity(node_count as usize);
+            let mut nodes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(node_count as usize));
             for _ in 0..node_count {
                 let id = reader.read_bit_long();
                 let edge_flags = reader.read_bit_long();
@@ -924,7 +925,7 @@ pub fn read_dynamic_block_data(
                 });
             }
             let edge_count = safe_count(reader.read_bit_long());
-            let mut edges = Vec::with_capacity(edge_count as usize);
+            let mut edges = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(edge_count as usize));
             for _ in 0..edge_count {
                 let id = reader.read_bit_long();
                 let next_id = reader.read_bit_long();

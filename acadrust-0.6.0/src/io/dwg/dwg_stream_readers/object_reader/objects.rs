@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! Non-graphical object readers for DWG object section.
 //!
 //! Each reader is the exact inverse of the corresponding writer in
@@ -115,7 +116,7 @@ pub fn read_visual_style(
 
     value.extended_lighting_model = reader.read_bit_short();
     value.internal_use_only = reader.read_bit();
-    let mut properties = Vec::with_capacity(58);
+    let mut properties = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(58));
     properties.push(read_visual_style_property_long(reader));
     properties.push(read_visual_style_property_long(reader));
     properties.push(read_visual_style_property_long(reader));
@@ -242,7 +243,7 @@ fn read_material_texture(reader: &mut DwgMergedReader, depth: usize) -> Material
             5 => Some(MaterialProceduralValue::Text(reader.read_variable_text())),
             6 if depth < 8 => {
                 let count = safe_count(reader.read_bit_short() as i32);
-                let mut rows = Vec::with_capacity(count as usize);
+                let mut rows = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     let name = reader.read_variable_text();
                     rows.push((name, read_material_texture(reader, depth + 1)));
@@ -322,7 +323,7 @@ fn read_legacy_table_row_style(reader: &mut DwgMergedReader, version: DwgVersion
     value.text_color = reader.read_cm_true_color();
     value.fill_color = reader.read_cm_true_color();
     value.fill_enabled = reader.read_bit();
-    let mut borders = Vec::with_capacity(6);
+    let mut borders = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(6));
     for _ in 0..6 {
         borders.push(TableCellBorder {
             line_weight: LineWeight::from_value(reader.read_bit_short()),
@@ -385,7 +386,7 @@ pub(super) fn read_table_cell_style_data(reader: &mut DwgMergedReader) -> TableC
         value.vertical_spacing = reader.read_bit_double();
     }
     let count = safe_count(reader.read_bit_long()).min(6);
-    value.borders.reserve(count as usize);
+    value.borders.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         let index_mask = reader.read_bit_long();
         if index_mask == 0 {
@@ -483,7 +484,7 @@ pub fn read_table_style(reader: &mut DwgMergedReader, version: DwgVersion) -> Ta
     }
     value.modern_style = Some(modern_style);
     let override_count = safe_count(reader.read_bit_long()).min(64);
-    value.modern_overrides.reserve(override_count as usize);
+    value.modern_overrides.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(override_count as usize));
     for _ in 0..override_count {
         let key = reader.read_bit_long();
         value
@@ -780,7 +781,7 @@ pub fn read_dictionary(reader: &mut DwgMergedReader, version: DwgVersion) -> Dic
         hard_owner = reader.read_byte() != 0;
     }
 
-    let mut entries = Vec::with_capacity(num_entries as usize);
+    let mut entries = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entries as usize));
     for _ in 0..num_entries {
         let name = clean_dict_key(reader.read_variable_text());
         let handle = reader.read_handle();
@@ -799,7 +800,7 @@ pub fn read_dictionary_with_default(reader: &mut DwgMergedReader) -> DictionaryW
     let duplicate_cloning = reader.read_bit_short();
     let hard_owner = reader.read_byte() != 0;
 
-    let mut entries = Vec::with_capacity(num_entries as usize);
+    let mut entries = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entries as usize));
     for _ in 0..num_entries {
         let name = clean_dict_key(reader.read_variable_text());
         let handle = reader.read_handle();
@@ -960,7 +961,7 @@ pub fn read_field(reader: &mut DwgMergedReader) -> FieldReadData {
     for _ in 0..num_childs {
         let _ = reader.read_handle();
     }
-    let mut objects = Vec::with_capacity(num_objects.max(0) as usize);
+    let mut objects = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_objects.max(0) as usize));
     for _ in 0..num_objects {
         objects.push(reader.read_handle());
     }
@@ -1098,7 +1099,7 @@ pub fn read_layout(reader: &mut DwgMergedReader, version: DwgVersion) -> LayoutD
     let named_ucs_handle = reader.read_handle();
 
     // R2004+: viewport handles
-    let mut viewport_handles = Vec::with_capacity(viewport_count.max(0) as usize);
+    let mut viewport_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(viewport_count.max(0) as usize));
     if version.r2004_plus() {
         for _ in 0..viewport_count {
             viewport_handles.push(reader.read_handle());
@@ -1142,7 +1143,7 @@ pub fn read_group(reader: &mut DwgMergedReader) -> GroupData {
     let selectable = reader.read_bit_short() != 0;
 
     let num_entities = safe_count(reader.read_bit_long());
-    let mut entity_handles = Vec::with_capacity(num_entities as usize);
+    let mut entity_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entities as usize));
     for _ in 0..num_entities {
         entity_handles.push(reader.read_handle());
     }
@@ -1168,7 +1169,7 @@ pub fn read_mlinestyle(
     let end_angle = reader.read_bit_double();
 
     let num_elements = reader.read_byte();
-    let mut elements = Vec::with_capacity(num_elements as usize);
+    let mut elements = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_elements as usize));
     for _ in 0..num_elements {
         let offset = reader.read_bit_double();
         let color = reader.read_cm_color();
@@ -1374,12 +1375,12 @@ pub fn read_sort_entities_table(reader: &mut DwgMergedReader) -> SortEntitiesTab
     // sort+entity pair per entry from the handle stream and the owner last,
     // which scrambled the order and the owner block on files written by other
     // CAD apps — draw order was effectively ignored. (#146)
-    let mut sort_handles = Vec::with_capacity(num_entries as usize);
+    let mut sort_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entries as usize));
     for _ in 0..num_entries {
         sort_handles.push(reader.read_main_handle());
     }
     let block_owner_handle = reader.read_handle();
-    let mut entries = Vec::with_capacity(num_entries as usize);
+    let mut entries = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entries as usize));
     for k in 0..num_entries as usize {
         let entity_handle = reader.read_handle();
         entries.push(SortEntitiesEntry {
@@ -1439,7 +1440,7 @@ fn decode_xrecord_entries(raw: &[u8], unicode: bool) -> (Vec<XRecordEntry>, bool
                 position += 2;
                 let text = if unicode {
                     require!(length.saturating_mul(2));
-                    let mut units = Vec::with_capacity(length);
+                    let mut units = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(length));
                     for _ in 0..length {
                         units.push(read_u16(position));
                         position += 2;
@@ -1533,7 +1534,7 @@ pub fn read_xrecord(reader: &mut DwgMergedReader) -> XRecordData {
     let declared_size = reader.read_bit_long().max(0) as usize;
     let available_size = (reader.main_remaining_bits().max(0) as usize) / 8;
     let data_size = declared_size.min(available_size);
-    let mut raw_data = Vec::with_capacity(data_size);
+    let mut raw_data = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(data_size));
     for _ in 0..data_size {
         raw_data.push(reader.read_byte());
     }
@@ -1752,13 +1753,13 @@ pub fn read_geodata(reader: &mut DwgMergedReader) -> GeoDataData {
     d.observation_to_tag = reader.read_variable_text();
     d.observation_coverage_tag = reader.read_variable_text();
     let point_count = safe_count(reader.read_bit_long()).min(50_000);
-    d.mesh_points.reserve(point_count as usize);
+    d.mesh_points.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(point_count as usize));
     for _ in 0..point_count {
         d.mesh_points
             .push((reader.read_2raw_double(), reader.read_2raw_double()));
     }
     let face_count = safe_count(reader.read_bit_long()).min(50_000);
-    d.mesh_faces.reserve(face_count as usize);
+    d.mesh_faces.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(face_count as usize));
     for _ in 0..face_count {
         d.mesh_faces.push((
             reader.read_bit_long(),

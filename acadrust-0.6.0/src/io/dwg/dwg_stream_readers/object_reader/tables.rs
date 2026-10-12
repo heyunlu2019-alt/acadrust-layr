@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! Table entry readers for DWG object section.
 //!
 //! Each reader is the exact inverse of the corresponding writer in
@@ -447,7 +448,7 @@ pub fn read_table_control(reader: &mut DwgMergedReader) -> TableControlData {
 /// Read VX_CONTROL (R13-R2000).
 pub fn read_vx_control(reader: &mut DwgMergedReader) -> VxControlData {
     let entry_count = reader.read_bit_short().max(0);
-    let mut entry_handles = Vec::with_capacity(entry_count as usize);
+    let mut entry_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(entry_count as usize));
     for _ in 0..entry_count {
         entry_handles.push(reader.read_handle());
     }
@@ -673,7 +674,7 @@ pub fn read_linetype(reader: &mut DwgMergedReader, version: DwgVersion) -> Linet
     let alignment = reader.read_byte();
     let num_dashes = reader.read_byte() as usize;
 
-    let mut segments = Vec::with_capacity(num_dashes);
+    let mut segments = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_dashes));
     for _ in 0..num_dashes {
         let length = reader.read_bit_double();
         let shape_number = reader.read_bit_short();
@@ -722,7 +723,7 @@ pub fn read_linetype(reader: &mut DwgMergedReader, version: DwgVersion) -> Linet
     let xref_handle = reader.read_handle();
 
     // Shape file handles per segment
-    let mut shape_handles = Vec::with_capacity(num_dashes);
+    let mut shape_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_dashes));
     for _ in 0..num_dashes {
         shape_handles.push(reader.read_handle());
     }
@@ -1430,7 +1431,7 @@ pub fn read_block_header(reader: &mut DwgMergedReader, version: DwgVersion) -> B
         // Read preview data if present
         let pds = preview_data_size.unwrap_or(0);
         if pds > 0 {
-            preview_data.reserve(pds as usize);
+            preview_data.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(pds as usize));
             for _ in 0..pds {
                 preview_data.push(reader.read_byte());
             }

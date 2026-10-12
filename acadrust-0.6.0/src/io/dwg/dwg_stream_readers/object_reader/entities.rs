@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! Entity readers for DWG object section.
 //!
 //! Each reader is the exact inverse of the corresponding writer in
@@ -439,12 +440,12 @@ pub fn read_section_object(reader: &mut DwgMergedReader) -> ExtendedEntityData {
     let indicator_alpha = reader.read_bit_short();
     let indicator_color = reader.read_cm_color();
     let vertex_count = safe_count(reader.read_bit_long()) as usize;
-    let mut vertices = Vec::with_capacity(vertex_count);
+    let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(vertex_count));
     for _ in 0..vertex_count {
         vertices.push(reader.read_3bit_double());
     }
     let back_line_count = safe_count(reader.read_bit_long()) as usize;
-    let mut back_line_vertices = Vec::with_capacity(back_line_count);
+    let mut back_line_vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(back_line_count));
     for _ in 0..back_line_count {
         back_line_vertices.push(reader.read_3bit_double());
     }
@@ -649,7 +650,7 @@ pub fn read_point_cloud(
             high_intensity_threshold = reader.read_bit_double();
             show_clipping = reader.read_bit();
             let clip_count = safe_count(reader.read_bit_long()) as usize;
-            clippings.reserve(clip_count);
+            clippings.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(clip_count));
             for _ in 0..clip_count {
                 let inverted = reader.read_bit();
                 let clip_type = reader.read_bit_short();
@@ -658,7 +659,7 @@ pub fn read_point_cloud(
                 } else {
                     2
                 };
-                let mut vertices = Vec::with_capacity(vertex_count);
+                let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(vertex_count));
                 for _ in 0..vertex_count {
                     vertices.push(reader.read_2raw_double());
                 }
@@ -678,7 +679,7 @@ pub fn read_point_cloud(
         }
     }
 
-    let mut source_files = Vec::with_capacity(source_count);
+    let mut source_files = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(source_count));
     for _ in 0..source_count {
         source_files.push(reader.read_variable_text());
     }
@@ -755,7 +756,7 @@ pub fn read_point_cloud_ex(reader: &mut DwgMergedReader) -> ExtendedEntityData {
         intensity_as_gradient = reader.read_bit();
         elevation_as_gradient = reader.read_bit();
     }
-    let mut croppings = Vec::with_capacity(crop_count);
+    let mut croppings = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(crop_count));
     for _ in 0..crop_count {
         let crop_type = reader.read_bit_short();
         let inside = reader.read_bit();
@@ -764,7 +765,7 @@ pub fn read_point_cloud_ex(reader: &mut DwgMergedReader) -> ExtendedEntityData {
         let x_direction = reader.read_3bit_double();
         let y_direction = reader.read_3bit_double();
         let point_count = safe_count(reader.read_bit_long()) as usize;
-        let mut points = Vec::with_capacity(point_count);
+        let mut points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(point_count));
         for _ in 0..point_count {
             points.push(reader.read_3bit_double());
         }
@@ -863,14 +864,14 @@ pub fn read_proxy_entity(
         false
     };
     let object_data_bits = reader.main_remaining_bits() as u32;
-    let mut object_data = vec![0u8; object_data_bits.div_ceil(8) as usize];
+    let mut object_data = crate::io::dwg::dwg_stream_readers::bit_reader::zeroed(object_data_bits.div_ceil(8) as usize);
     for bit_index in 0..object_data_bits as usize {
         if reader.read_bit() {
             object_data[bit_index / 8] |= 0x80 >> (bit_index % 8);
         }
     }
     let text_data_bits = reader.text_remaining_bits() as u32;
-    let mut text_data = vec![0u8; text_data_bits.div_ceil(8) as usize];
+    let mut text_data = crate::io::dwg::dwg_stream_readers::bit_reader::zeroed(text_data_bits.div_ceil(8) as usize);
     for bit_index in 0..text_data_bits as usize {
         if reader.read_text_bit() {
             text_data[bit_index / 8] |= 0x80 >> (bit_index % 8);
@@ -1245,8 +1246,8 @@ fn read_lwpolyline_impl(
     };
 
     // Read vertex positions
-    let mut xs = Vec::with_capacity(num_pts as usize);
-    let mut ys = Vec::with_capacity(num_pts as usize);
+    let mut xs = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize));
+    let mut ys = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize));
 
     if raw_points || version.r13_14_only() {
         for _ in 0..num_pts {
@@ -1276,7 +1277,7 @@ fn read_lwpolyline_impl(
     }
 
     // Read vertex IDs (R2010+, flag 0x400)
-    let mut vertex_ids = vec![0; num_pts as usize];
+    let mut vertex_ids = vec![0; crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize)];
     if has_vertex_ids {
         for i in 0..num_vertex_ids as usize {
             let vertex_id = reader.read_bit_long();
@@ -1298,7 +1299,7 @@ fn read_lwpolyline_impl(
         }
     }
 
-    let mut vertices = Vec::with_capacity(num_pts as usize);
+    let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize));
     for i in 0..num_pts as usize {
         vertices.push(LwPolylineVertex {
             x: xs[i],
@@ -1639,7 +1640,7 @@ pub fn read_mtext(
 
                 // Per-column heights only for dynamic, non-auto-height columns.
                 if !column_auto_height && column_type == 2 && column_count > 0 {
-                    column_heights.reserve(column_count as usize);
+                    column_heights.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(column_count as usize));
                     for _ in 0..column_count {
                         // Column height BD 46
                         column_heights.push(reader.read_bit_double());
@@ -1713,7 +1714,7 @@ pub fn read_leader(
     let path_type = reader.read_bit_short();
 
     let num_pts = safe_count(reader.read_bit_long());
-    let mut vertices = Vec::with_capacity(num_pts as usize);
+    let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize));
     for _ in 0..num_pts {
         vertices.push(reader.read_3bit_double());
     }
@@ -3034,20 +3035,20 @@ pub fn read_mline(reader: &mut DwgMergedReader) -> MLineData {
     let vertex_count = reader.read_bit_short();
 
     // Read vertices (position + direction + miter + segments)
-    let mut vertices = Vec::with_capacity(vertex_count as usize);
+    let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(vertex_count as usize));
     for _ in 0..vertex_count {
         let pos = reader.read_3bit_double();
         let dir = reader.read_3bit_double();
         let miter = reader.read_3bit_double();
-        let mut segments = Vec::with_capacity(lines_in_style as usize);
+        let mut segments = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(lines_in_style as usize));
         for _ in 0..lines_in_style {
             let num_params = reader.read_bit_short();
-            let mut params = Vec::with_capacity(num_params as usize);
+            let mut params = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_params as usize));
             for _ in 0..num_params {
                 params.push(reader.read_bit_double());
             }
             let num_area = reader.read_bit_short();
-            let mut area_params = Vec::with_capacity(num_area as usize);
+            let mut area_params = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_area as usize));
             for _ in 0..num_area {
                 area_params.push(reader.read_bit_double());
             }
@@ -3085,7 +3086,7 @@ pub fn read_mesh(reader: &mut DwgMergedReader) -> MeshData {
     let subdivision_level = reader.read_bit_long();
 
     let num_verts = safe_count(reader.read_bit_long());
-    let mut vertices = Vec::with_capacity(num_verts as usize);
+    let mut vertices = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_verts as usize));
     for _ in 0..num_verts {
         vertices.push(reader.read_3bit_double());
     }
@@ -3122,7 +3123,7 @@ pub fn read_mesh(reader: &mut DwgMergedReader) -> MeshData {
                 .checked_add(face_vertex_count)
                 .is_some_and(|count| count <= MAX_MESH_FACE_INDICES);
         let mut valid_face = store_face;
-        let mut face = Vec::with_capacity(if valid_face { face_vertex_count } else { 0 });
+        let mut face = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(if valid_face { face_vertex_count } else { 0 }));
         for _ in 0..face_vertex_count {
             let vertex = reader.read_bit_long();
             if store_face {
@@ -3145,7 +3146,7 @@ pub fn read_mesh(reader: &mut DwgMergedReader) -> MeshData {
     }
 
     let num_edges = safe_count(reader.read_bit_long());
-    let mut edges = Vec::with_capacity(num_edges as usize);
+    let mut edges = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_edges as usize));
     for _ in 0..num_edges {
         let s = reader.read_bit_long();
         let e = reader.read_bit_long();
@@ -3153,7 +3154,7 @@ pub fn read_mesh(reader: &mut DwgMergedReader) -> MeshData {
     }
 
     let num_creases = safe_count(reader.read_bit_long());
-    let mut crease_values = Vec::with_capacity(num_creases as usize);
+    let mut crease_values = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_creases as usize));
     for _ in 0..num_creases {
         crease_values.push(reader.read_bit_double());
     }
@@ -3209,7 +3210,7 @@ pub fn read_underlay(reader: &mut DwgMergedReader) -> UnderlayData {
     let definition_handle = reader.read_handle();
 
     let n = safe_count(reader.read_bit_long()) as usize;
-    let mut clip_boundary_vertices: Vec<Vector2> = Vec::with_capacity(n);
+    let mut clip_boundary_vertices: Vec<Vector2> = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(n));
     for _ in 0..n {
         clip_boundary_vertices.push(reader.read_2raw_double());
     }
@@ -3590,7 +3591,7 @@ fn read_table_cell(reader: &mut DwgMergedReader, version: DwgVersion) -> TableCe
         cell.geometry_handle = (handle != 0).then(|| Handle::from(handle));
         let geometry_count = safe_count(reader.read_bit_long());
         cell.geometry_flags = geometry_count;
-        cell.geometries.reserve(geometry_count as usize);
+        cell.geometries.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(geometry_count as usize));
         for index in 0..geometry_count as usize {
             let geometry = read_cell_content_geometry(reader);
             if let Some(content) = cell.contents.get_mut(index) {
@@ -3622,12 +3623,12 @@ pub(crate) fn read_table_content(
     let description = reader.read_variable_text();
 
     let ncols = safe_count(reader.read_bit_long());
-    let mut columns = Vec::with_capacity(ncols as usize);
+    let mut columns = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ncols as usize));
     for _ in 0..ncols {
         let name = reader.read_variable_text();
         let custom_data = reader.read_bit_long();
         let ndata = safe_count(reader.read_bit_long());
-        let mut custom_data_items = Vec::with_capacity(ndata as usize);
+        let mut custom_data_items = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ndata as usize));
         for _ in 0..ndata {
             custom_data_items.push(read_custom_table_data(reader, version));
         }
@@ -3645,16 +3646,16 @@ pub(crate) fn read_table_content(
     }
 
     let nrows = safe_count(reader.read_bit_long());
-    let mut rows = Vec::with_capacity(nrows as usize);
+    let mut rows = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(nrows as usize));
     for _ in 0..nrows {
         let ncells = safe_count(reader.read_bit_long());
-        let mut cells = Vec::with_capacity(ncells as usize);
+        let mut cells = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ncells as usize));
         for _ in 0..ncells {
             cells.push(read_table_cell(reader, version));
         }
         let custom_data = reader.read_bit_long();
         let ndata = safe_count(reader.read_bit_long());
-        let mut custom_data_items = Vec::with_capacity(ndata as usize);
+        let mut custom_data_items = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ndata as usize));
         for _ in 0..ndata {
             custom_data_items.push(read_custom_table_data(reader, version));
         }
@@ -3672,13 +3673,13 @@ pub(crate) fn read_table_content(
     }
 
     let nfields = safe_count(reader.read_bit_long());
-    let mut field_handles = Vec::with_capacity(nfields as usize);
+    let mut field_handles = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(nfields as usize));
     for _ in 0..nfields {
         field_handles.push(Handle::from(reader.read_handle()));
     }
     let base_style = read_cell_style(reader);
     let nranges = safe_count(reader.read_bit_long());
-    let mut merged_ranges = Vec::with_capacity(nranges as usize);
+    let mut merged_ranges = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(nranges as usize));
     for _ in 0..nranges {
         merged_ranges.push(crate::entities::table::CellRange {
             top_row: reader.read_bit_long().max(0) as usize,
@@ -4089,7 +4090,7 @@ pub fn read_raster_image(reader: &mut DwgMergedReader, version: DwgVersion) -> R
     } else {
         // Polygonal
         let n = safe_count(reader.read_bit_long()) as usize;
-        clip_boundary_vertices.reserve(n);
+        clip_boundary_vertices.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(n));
         for _ in 0..n {
             clip_boundary_vertices.push(reader.read_2raw_double());
         }
@@ -4260,7 +4261,7 @@ pub(crate) fn read_embedded_mtext(
             column_auto_height = reader.read_bit();
             column_flow_reversed = reader.read_bit();
             if column_type == 2 && !column_auto_height && column_count > 0 {
-                column_heights.reserve(column_count as usize);
+                column_heights.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(column_count as usize));
                 for _ in 0..column_count {
                     column_heights.push(reader.read_bit_double());
                 }
@@ -4542,7 +4543,7 @@ pub fn read_multileader(
     let mut arrowhead_overrides = Vec::new();
     if !version.r2010_plus() {
         let ah_count = safe_count(reader.read_bit_long());
-        arrowhead_overrides.reserve(ah_count as usize);
+        arrowhead_overrides.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ah_count as usize));
         for index in 0..ah_count {
             let is_default = reader.read_bit();
             let handle = reader.read_handle();
@@ -4559,7 +4560,7 @@ pub fn read_multileader(
     // immediately follow the pre-R2007 arrowhead override list when present.
     let mut block_attributes = Vec::new();
     let ba_count = safe_count(reader.read_bit_long());
-    block_attributes.reserve(ba_count as usize);
+    block_attributes.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(ba_count as usize));
     for _ in 0..ba_count {
         let def_handle = reader.read_handle();
         let text = reader.read_variable_text();
@@ -4665,7 +4666,7 @@ pub(crate) fn read_multileader_annotation_context(
     }
 
     // Read each leader root
-    let mut leader_roots = Vec::with_capacity(leader_root_count as usize);
+    let mut leader_roots = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(leader_root_count as usize));
     for _ in 0..leader_root_count {
         leader_roots.push(read_leader_root(reader, version, dxf_version));
     }
@@ -4741,7 +4742,7 @@ pub(crate) fn read_multileader_annotation_context(
         column_flow_reversed = reader.read_bit();
 
         let col_count = safe_count(reader.read_bit_long());
-        column_sizes = Vec::with_capacity(col_count as usize);
+        column_sizes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(col_count as usize));
         for _ in 0..col_count {
             column_sizes.push(reader.read_bit_double());
         }
@@ -4870,7 +4871,7 @@ fn read_leader_root(
     let direction = reader.read_3bit_double();
 
     let bp_count = safe_count(reader.read_bit_long());
-    let mut break_points = Vec::with_capacity(bp_count as usize);
+    let mut break_points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(bp_count as usize));
     for _ in 0..bp_count {
         let start_point = reader.read_3bit_double();
         let end_point = reader.read_3bit_double();
@@ -4884,7 +4885,7 @@ fn read_leader_root(
     let landing_distance = reader.read_bit_double();
 
     let line_count = safe_count(reader.read_bit_long());
-    let mut lines = Vec::with_capacity(line_count as usize);
+    let mut lines = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(line_count as usize));
     for _ in 0..line_count {
         lines.push(read_leader_line(reader, version));
     }
@@ -4909,17 +4910,17 @@ fn read_leader_root(
 
 fn read_leader_line(reader: &mut DwgMergedReader, version: DwgVersion) -> LeaderLine {
     let pt_count = safe_count(reader.read_bit_long());
-    let mut points = Vec::with_capacity(pt_count as usize);
+    let mut points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(pt_count as usize));
     for _ in 0..pt_count {
         points.push(reader.read_3bit_double());
     }
 
     let break_info_count = safe_count(reader.read_bit_long());
-    let mut break_infos = Vec::with_capacity(break_info_count as usize);
+    let mut break_infos = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(break_info_count as usize));
     for _ in 0..break_info_count {
         let segment_index = reader.read_bit_long();
         let sep_count = safe_count(reader.read_bit_long());
-        let mut break_points = Vec::with_capacity(sep_count as usize);
+        let mut break_points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(sep_count as usize));
         for _ in 0..sep_count {
             let start_point = reader.read_3bit_double();
             let end_point = reader.read_3bit_double();
@@ -5237,7 +5238,7 @@ fn read_acis_entity_impl(
 
             // Decrypt with selective 159-substitution cipher
             // (per LibreDWG dwg.spec: bytes <= 32 pass through, bytes > 32: 159 - byte)
-            let mut decoded = Vec::with_capacity(all_bytes.len());
+            let mut decoded = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(all_bytes.len()));
             for &b in &all_bytes {
                 if b <= 32 {
                     decoded.push(b);
@@ -5368,7 +5369,7 @@ fn read_acis_entity_impl(
             let has_sil_wires = reader.read_bit();
             if has_sil_wires {
                 let num_sw = safe_count(reader.read_bit_long());
-                sil_wires.reserve(num_sw as usize);
+                sil_wires.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_sw as usize));
                 for _ in 0..num_sw {
                     sil_wires.push(read_wire(reader, version));
                 }
@@ -5400,7 +5401,7 @@ fn read_acis_entity_impl(
     if version.r2007_plus() {
         if acis_version > 1 && !has_ds_data {
             let count = safe_count(reader.read_bit_long());
-            materials.reserve(count as usize);
+            materials.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 let array_index = reader.read_bit_long();
                 let absolute_reference = reader.read_bit_long();
@@ -5610,8 +5611,8 @@ pub fn read_surface(
                     reader.read_bit(),
                     reader.read_bit_long(),
                 );
-                cross_section_entities.reserve(cross_count as usize);
-                guide_entities.reserve(guide_count as usize);
+                cross_section_entities.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(cross_count as usize));
+                guide_entities.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(guide_count as usize));
                 for _ in 0..cross_count {
                     if let Some(entity) = read_surface_embedded_entity(reader, version, dxf_version)
                     {
@@ -5771,7 +5772,7 @@ fn read_wire(reader: &mut DwgMergedReader, version: DwgVersion) -> Wire {
     };
     let acis_index = reader.read_bit_long();
     let num_pts = safe_count(reader.read_bit_long());
-    let mut pts = Vec::with_capacity(num_pts as usize);
+    let mut pts = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_pts as usize));
     for _ in 0..num_pts {
         pts.push(reader.read_3bit_double());
     }

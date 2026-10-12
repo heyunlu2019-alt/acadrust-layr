@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! Readers for native class-registered non-graphical objects.
 
 use crate::io::dwg::dwg_stream_readers::merged_reader::DwgMergedReader;
@@ -124,7 +125,7 @@ fn read_view_rep_sketch_geometry(
                 reader.read_bit_long(),
                 reader.read_bit_long(),
             ];
-            let mut knots = Vec::with_capacity(count(knot_header[0]));
+            let mut knots = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count(knot_header[0])));
             for _ in 0..count(knot_header[0]) {
                 knots.push(reader.read_bit_double());
             }
@@ -133,7 +134,7 @@ fn read_view_rep_sketch_geometry(
                 reader.read_bit_long(),
                 reader.read_bit_long(),
             ];
-            let mut weights = Vec::with_capacity(count(weight_header[0]));
+            let mut weights = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count(weight_header[0])));
             for _ in 0..count(weight_header[0]) {
                 weights.push(reader.read_bit_double());
             }
@@ -142,7 +143,7 @@ fn read_view_rep_sketch_geometry(
                 reader.read_bit_long(),
                 reader.read_bit_long(),
             ];
-            let mut control_points = Vec::with_capacity(count(point_header[0]));
+            let mut control_points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count(point_header[0])));
             for _ in 0..count(point_header[0]) {
                 control_points.push(reader.read_3bit_double());
             }
@@ -229,7 +230,7 @@ fn read_view_rep(reader: &mut DwgMergedReader) -> ViewRep {
     for _ in 0..count(reader.read_bit_long()) {
         let class_name = reader.read_variable_text();
         let path_count = count(reader.read_bit_short() as i32);
-        let mut objects = Vec::with_capacity(path_count.saturating_add(1));
+        let mut objects = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(path_count.saturating_add(1)));
         for _ in 0..=path_count {
             objects.push(read_view_rep_handle(reader));
         }
@@ -415,7 +416,7 @@ pub fn read_class_object_data(
         "PARTIAL_VIEWING_INDEX" => {
             let num_entries = count(reader.read_bit_long());
             let has_entries = num_entries != 0 && reader.read_bit();
-            let mut entries = Vec::with_capacity(num_entries);
+            let mut entries = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(num_entries));
             for _ in 0..num_entries {
                 entries.push(PartialViewingIndexEntry {
                     extents_min: reader.read_3bit_double(),
@@ -865,7 +866,7 @@ pub fn read_class_object_data(
                 return None;
             }
             let name = reader.read_variable_text();
-            let mut columns = Vec::with_capacity(column_count as usize);
+            let mut columns = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(column_count as usize));
             for _ in 0..column_count {
                 let value_type = reader.read_bit_long();
                 // Unknown schemas must keep the complete raw record: skipping

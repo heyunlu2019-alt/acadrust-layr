@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! DWG Document Builder — maps raw DWG parsed data into CadDocument.
 //!
 //! This module bridges the gap between the low-level object readers
@@ -201,7 +202,7 @@ impl Pass2Output {
                 model_space_block_handle,
                 paper_space_block_handle,
             },
-            entities: Vec::with_capacity(capacity),
+            entities: Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(capacity)),
             objects: HashMap::with_capacity(capacity / 8),
             eed_by_handle: HashMap::new(),
             xdic_by_handle: HashMap::new(),
@@ -617,7 +618,7 @@ impl DwgDocumentBuilder {
                 Self::resolve_type_code(raw, &class_map),
             )))
         });
-        let mut record_catalog = Vec::with_capacity(catalog_results.len());
+        let mut record_catalog = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(catalog_results.len()));
         let mut skipped_catalog = 0usize;
         for result in catalog_results {
             match result {
@@ -1636,7 +1637,7 @@ impl DwgDocumentBuilder {
                     .is_some_and(|value| value.trim() == "2")
         });
         document.reserve_loaded_entities(pass2_records.len());
-        document.objects.reserve(pass2_records.len().min(16_384));
+        document.objects.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(pass2_records.len().min(16_384)));
 
         let source_version = document.version;
         let model_space_block_handle = document.header.model_space_block_handle;
@@ -5565,7 +5566,7 @@ impl DwgDocumentBuilder {
                     };
                     let object_data_bits = reader.main_remaining_bits() as u32;
                     let mut object_data =
-                        vec![0u8; object_data_bits.div_ceil(8) as usize];
+                        crate::io::dwg::dwg_stream_readers::bit_reader::zeroed(object_data_bits.div_ceil(8) as usize);
                     for bit_index in 0..object_data_bits as usize {
                         if reader.read_bit() {
                             object_data[bit_index / 8] |=
@@ -5575,7 +5576,7 @@ impl DwgDocumentBuilder {
                     let text_data_bits =
                         reader.text_remaining_bits() as u32;
                     let mut text_data =
-                        vec![0u8; text_data_bits.div_ceil(8) as usize];
+                        crate::io::dwg::dwg_stream_readers::bit_reader::zeroed(text_data_bits.div_ceil(8) as usize);
                     for bit_index in 0..text_data_bits as usize {
                         if reader.read_text_bit() {
                             text_data[bit_index / 8] |=

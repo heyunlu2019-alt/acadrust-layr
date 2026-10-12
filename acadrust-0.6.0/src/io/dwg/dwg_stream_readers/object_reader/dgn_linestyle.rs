@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 use crate::io::dwg::dwg_stream_readers::merged_reader::DwgMergedReader;
 use crate::objects::{
     DgnLineStyleData, DgnLsComponentData, DgnLsComponentType, DgnLsCompoundComponent,
@@ -64,7 +65,7 @@ pub fn read_dgn_line_style_data(
         DgnLsComponentType::Stroke => DgnLsComponentData::Stroke(read_stroke_pattern(reader)),
         DgnLsComponentType::Point => {
             let count = safe_count(reader.read_bit_long());
-            let mut symbols = Vec::with_capacity(count as usize);
+            let mut symbols = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 symbols.push(DgnLsSymbolReference {
                     symbol_component: Handle::NULL,
@@ -140,7 +141,7 @@ fn read_stroke_pattern(reader: &mut DwgMergedReader) -> DgnLsStrokePattern {
     let phase_mode =
         DgnLsPhaseMode::from_code(((reader.read_bit() as u8) << 1) | reader.read_bit() as u8);
     let count = safe_count(reader.read_bit_long());
-    let mut strokes = Vec::with_capacity(count as usize);
+    let mut strokes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         strokes.push(DgnLsStroke {
             is_dash: reader.read_bit(),

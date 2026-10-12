@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! DWG file reader
 //!
 //! Reads DWG binary files and extracts structural information including
@@ -149,6 +150,7 @@ fn decode_ac21_page(
         return compressed_data;
     }
 
+    assert!(uncompressed_size <= 100_000_000, "AC21 page too large");
     let mut padded_source = vec![0u8; compressed_data.len() + 64];
     padded_source[..compressed_data.len()].copy_from_slice(&compressed_data);
     let mut decompressed_data = vec![0u8; uncompressed_size as usize + 64];
@@ -2279,6 +2281,7 @@ impl<R: Read + Seek> DwgReader<R> {
         // Field 0x08 ("Max size") is the page partition size per spec §5.4.
         // We truncate to the total data size, not the page size.
         let total_size = section.compressed_size as usize;
+        if total_size > 256 << 20 { return Err(DxfError::InvalidFormat("section too large".into())); }
         let mut result = Vec::with_capacity(total_size);
 
         // encoding=1 (stored): contiguous data followed by non-interleaved RS
@@ -2316,6 +2319,7 @@ impl<R: Read + Seek> DwgReader<R> {
             let mut prepared = Vec::with_capacity(page_batch.len());
             for page in page_batch {
                 let fill_size = page.decompressed_size as usize;
+                if fill_size > 100_000_000 { return Err(DxfError::InvalidFormat("page too large".into())); }
                 let payload = match info.page_records.get(&(page.page_number as i32)) {
                     Some(&(page_offset, _)) if encoding == 1 => {
                         let read = (|| -> Result<Vec<u8>, DxfError> {
@@ -2469,6 +2473,7 @@ impl<R: Read + Seek> DwgReader<R> {
         let is_compressed = section.encoding == 2;
         let max_page_size = section.decompressed_size as usize;
 
+        if total_size > 256 << 20 { return Err(DxfError::InvalidFormat("section too large".into())); }
         let mut result = vec![0u8; total_size];
         let batch_pages = worker_count().saturating_mul(2);
 

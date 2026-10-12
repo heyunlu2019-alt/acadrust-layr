@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 use crate::entities::solid3d::AcisVersion;
 use crate::io::dwg::dwg_stream_readers::merged_reader::DwgMergedReader;
 use crate::io::dwg::dwg_version::DwgVersion;
@@ -12,7 +13,7 @@ fn handle(reader: &mut DwgMergedReader) -> Handle {
 
 fn read_handles(reader: &mut DwgMergedReader, count: i32) -> Vec<Handle> {
     let count = safe_count(count);
-    let mut values = Vec::with_capacity(count as usize);
+    let mut values = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         values.push(handle(reader));
     }
@@ -55,7 +56,7 @@ fn read_value_param(reader: &mut DwgMergedReader) -> AssocValueParam {
     let name = reader.read_variable_text();
     let unit_type = reader.read_bit_long();
     let count = safe_count(reader.read_bit_long());
-    let mut variables = Vec::with_capacity(count as usize);
+    let mut variables = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         variables.push(AssocValueParamVariable {
             value: read_eval_variant(reader),
@@ -73,7 +74,7 @@ fn read_value_param(reader: &mut DwgMergedReader) -> AssocValueParam {
 
 fn read_value_params(reader: &mut DwgMergedReader, count: i32) -> Vec<AssocValueParam> {
     let count = safe_count(count);
-    let mut values = Vec::with_capacity(count as usize);
+    let mut values = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         values.push(read_value_param(reader));
     }
@@ -116,7 +117,7 @@ fn read_action(reader: &mut DwgMergedReader) -> AssocAction {
     let action_index = reader.read_bit_long();
     let max_dependency_index = reader.read_bit_long();
     let count = safe_count(reader.read_bit_long());
-    let mut dependencies = Vec::with_capacity(count as usize);
+    let mut dependencies = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         dependencies.push(AssocActionDependency {
             is_owned: reader.read_bit(),
@@ -329,7 +330,7 @@ fn read_annotation_action(
     match kind {
         AssocAnnotationKind::MLeader => {
             let count = safe_count(reader.read_bit_long());
-            value.actions.reserve(count as usize);
+            value.actions.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 value.actions.push(AssocAnnotationDependency {
                     dependency_id: reader.read_bit_long(),
@@ -430,7 +431,7 @@ fn read_array_parameters(reader: &mut DwgMergedReader) -> AssocArrayParameters {
     let version = reader.read_bit_long();
     let count = safe_count(reader.read_bit_long());
     let class_name = reader.read_variable_text();
-    let mut items = Vec::with_capacity(count as usize);
+    let mut items = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         let class_version = reader.read_bit_long();
         let location = [
@@ -500,7 +501,7 @@ fn read_dimension_association(reader: &mut DwgMergedReader) -> AssocDimensionAss
                 let main_subent_type = reader.read_bit_long();
                 let main_gs_marker = reader.read_bit_long();
                 let count = safe_count(reader.read_bit_long());
-                let mut xref_paths = Vec::with_capacity(count as usize);
+                let mut xref_paths = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     xref_paths.push(reader.read_variable_text());
                 }
@@ -521,7 +522,7 @@ fn read_dimension_association(reader: &mut DwgMergedReader) -> AssocDimensionAss
                 let intersection_subent_type = reader.read_bit_long();
                 let intersection_gs_marker = reader.read_bit_long();
                 let count = safe_count(reader.read_bit_long());
-                let mut paths = Vec::with_capacity(count as usize);
+                let mut paths = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     paths.push(reader.read_variable_text());
                 }
@@ -572,14 +573,14 @@ fn read_static_pers_subent_manager(reader: &mut DwgMergedReader) -> PersSubentMa
     let associative_step_count = reader.read_bit_long();
     let associative_subent_count = reader.read_bit_long();
     let count = safe_count(reader.read_bit_long());
-    let mut steps = Vec::with_capacity(count as usize);
+    let mut steps = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
     for _ in 0..count {
         steps.push(reader.read_bit_long());
     }
     let mut subents = Vec::new();
     if reader.main_remaining_bits() > 0 {
         let count = safe_count(reader.read_bit_long());
-        subents.reserve(count as usize);
+        subents.reserve(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
         for _ in 0..count {
             subents.push(reader.read_bit_long());
         }
@@ -604,7 +605,7 @@ fn read_constraint_node_common(
     let status_before = !version.r2013_plus(dxf_version);
     let mut status = if status_before { reader.read_byte() } else { 0 };
     let connection_count = safe_count(reader.read_bit_long());
-    let mut connections = Vec::with_capacity(connection_count as usize);
+    let mut connections = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(connection_count as usize));
     for _ in 0..connection_count {
         connections.push(reader.read_bit_long());
     }
@@ -666,7 +667,7 @@ fn read_constraint_node_data(
         "ACG2SMOOTHCONSTRAINT" => {
             let (owner_id, is_implied, is_active) = read_geometrical_constraint(reader);
             let count = safe_count(reader.read_bit_long());
-            let mut owned_constraint_ids = Vec::with_capacity(count as usize);
+            let mut owned_constraint_ids = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 owned_constraint_ids.push(reader.read_bit_long());
             }
@@ -733,7 +734,7 @@ fn read_constraint_node_data(
                 *value = reader.read_bit_double();
             }
             let count = safe_count(reader.read_bit_long());
-            let mut geometry_ids = Vec::with_capacity(count as usize);
+            let mut geometry_ids = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 geometry_ids.push(reader.read_bit_long());
             }
@@ -837,26 +838,26 @@ fn read_constraint_node_data(
             let knot_count = safe_count(reader.read_bit_long());
             let knot_physical_length = reader.read_bit_long();
             let knot_grow_length = reader.read_bit_long();
-            let mut knots = Vec::with_capacity(knot_count as usize);
+            let mut knots = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(knot_count as usize));
             for _ in 0..knot_count {
                 knots.push(reader.read_bit_double());
             }
             let weight_count = safe_count(reader.read_bit_long());
             let weight_physical_length = reader.read_bit_long();
             let weight_grow_length = reader.read_bit_long();
-            let mut weights = Vec::with_capacity(weight_count as usize);
+            let mut weights = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(weight_count as usize));
             for _ in 0..weight_count {
                 weights.push(reader.read_bit_double());
             }
             let control_point_count = safe_count(reader.read_bit_long());
             let control_point_physical_length = reader.read_bit_long();
             let control_point_grow_length = reader.read_bit_long();
-            let mut control_points = Vec::with_capacity(control_point_count as usize);
+            let mut control_points = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(control_point_count as usize));
             for _ in 0..control_point_count {
                 control_points.push(reader.read_3bit_double());
             }
             let implicit_point_count = safe_count(reader.read_bit_long());
-            let mut implicit_point_ids = Vec::with_capacity(implicit_point_count as usize);
+            let mut implicit_point_ids = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(implicit_point_count as usize));
             for _ in 0..implicit_point_count {
                 implicit_point_ids.push(reader.read_bit_long());
             }
@@ -924,7 +925,7 @@ pub fn read_associative_data(
             let network_version = reader.read_bit_short();
             let network_action_index = reader.read_bit_long();
             let count = safe_count(reader.read_bit_long());
-            let mut actions = Vec::with_capacity(count as usize);
+            let mut actions = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 actions.push(AssocActionDependency {
                     is_owned: reader.read_bit(),
@@ -999,7 +1000,7 @@ pub fn read_associative_data(
             ];
             let steps = {
                 let count = safe_count(reader.read_bit_long());
-                let mut result = Vec::with_capacity(count as usize);
+                let mut result = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
                 for _ in 0..count {
                     result.push(reader.read_bit_long());
                 }
@@ -1054,11 +1055,11 @@ pub fn read_associative_data(
             let count = reader.read_bit_long();
             let actions = read_handles(reader, count);
             let node_count = safe_count(reader.read_bit_long());
-            let mut nodes = Vec::with_capacity(node_count.saturating_add(1) as usize);
+            let mut nodes = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(node_count.saturating_add(1) as usize));
             if node_count > 0 {
                 let root_id = reader.read_bit_long();
                 let connection_count = safe_count(reader.read_bit_long());
-                let mut connections = Vec::with_capacity(connection_count as usize);
+                let mut connections = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(connection_count as usize));
                 for _ in 0..connection_count {
                     connections.push(reader.read_bit_long());
                 }
@@ -1071,12 +1072,12 @@ pub fn read_associative_data(
                     data: AssocConstraintNodeData::None,
                 });
                 let class_type_count = safe_count(reader.read_bit_long());
-                let mut class_types = Vec::with_capacity(class_type_count as usize);
+                let mut class_types = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(class_type_count as usize));
                 for _ in 0..class_type_count {
                     class_types.push(reader.read_variable_text());
                 }
                 let registered_count = safe_count(reader.read_bit_long()).min(node_count);
-                let mut registry = Vec::with_capacity(registered_count as usize);
+                let mut registry = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(registered_count as usize));
                 for _ in 0..registered_count {
                     let registry_flag = reader.read_bit();
                     let class_index = reader.read_bit_long();
@@ -1238,7 +1239,7 @@ pub fn read_associative_data(
             let body = read_array_action_body(reader, version, dxf_version);
             let status = reader.read_bit_short();
             let count = safe_count(reader.read_bit_long());
-            let mut item_locations = Vec::with_capacity(count as usize);
+            let mut item_locations = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 item_locations.push([
                     reader.read_bit_long(),
@@ -1283,7 +1284,7 @@ pub fn read_associative_data(
             let compound = read_compound(reader, version, dxf_version, false);
             let class_version = reader.read_bit_short();
             let count = safe_count(reader.read_bit_long());
-            let mut items = Vec::with_capacity(count as usize);
+            let mut items = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(count as usize));
             for _ in 0..count {
                 items.push(AssocViewRepHatchManagerItem {
                     first_id: reader.read_bit_long_long(),

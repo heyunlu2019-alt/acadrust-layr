@@ -1,3 +1,4 @@
+// Modified by LAYR, see LAYR-PATCHES.txt
 //! DWG Object Reader — Core Framework
 //!
 //! Reads the AcDb:AcDbObjects section, parsing each object record
@@ -454,7 +455,7 @@ impl DwgObjectReader {
             } else {
                 reader.read_raw_long() as i64
             };
-            let mut gdata = Vec::with_capacity(graphic_size.max(0) as usize);
+            let mut gdata = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(graphic_size.max(0) as usize));
             for _ in 0..graphic_size.max(0) {
                 gdata.push(reader.read_byte());
             }
@@ -757,7 +758,7 @@ impl DwgObjectReader {
             // Raw xdata bytes (from main stream, one byte at a time).
             // These bytes are NOT bit-packed; read them through the bit
             // reader to respect any outstanding bit shift.
-            let mut data = Vec::with_capacity(size_u);
+            let mut data = Vec::with_capacity(crate::io::dwg::dwg_stream_readers::bit_reader::cap(size_u));
             for _ in 0..size_u {
                 data.push(reader.read_byte());
             }

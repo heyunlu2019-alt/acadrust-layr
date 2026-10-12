@@ -4,3 +4,7 @@
 # Versioned IFCCAD conformance data
 conformance/ifccad/**/*.json text eol=lf
 conformance/ifccad/**/blobs/* binary
+
+# Modified by LAYR, see LAYR-PATCHES.txt
+# Preserve upstream bytes, including CRLF, in this vendored package.
+* -text
