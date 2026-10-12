@@ -1,0 +1,2 @@
+# Keep every byte as published upstream (several source files use CRLF).
+* -text
