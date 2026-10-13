@@ -1,7 +1,7 @@
 LAYR 對 acadrust 0.6.0 的修改（MPL-2.0）
 上游 commit：9820fd3f51b7e31ca2fc95df0312011755816617
 上游 .crate SHA-256：d7cbc67281dc3c099c3f35c268dd80a04215ffa0580c37510d4fe7a6e4d6d14f
-修改版原始碼公開網址：待定
+修改版原始碼公開網址：https://github.com/heyunlu2019-alt/acadrust-layr
 依 MPL-2.0，下列修改檔案的修改版原始碼會公開，與本說明一起提供。
 保留上游 LICENSE 與原有授權標頭、CRLF 換行。
 
